@@ -31,8 +31,10 @@
 (defn test-recreate-cl-every
   "Run a test n times, reinstantiating the classloader every m times"
   [n m]
-  (loop [^DynamicClassLoader cl (new clojure.lang.DynamicClassLoader) times-left n]
-    (let [class-name (str "Identity-" times-left) cl-bytes (get-class-bytes opcodes class-name "identity" "(I)I")]
+  (loop [^DynamicClassLoader cl (DynamicClassLoader.)
+         times-left n]
+    (let [class-name (str "Identity-" times-left)
+          cl-bytes (get-class-bytes opcodes class-name "identity" "(I)I")]
       (load-class cl class-name cl-bytes)
       (if (zero? times-left)
         ()
@@ -44,10 +46,11 @@
 (defn test-recreate-cl-every-hold-asm-refs
   "Run a test n times, reinstantiating the classloader every m times, holding onto Class-writing references"
   [n m]
-  (let [cw (new ClassWriter ClassWriter/COMPUTE_MAXS)
-        cn (new ClassNode)
-        mn (new MethodNode (+ Opcodes/ACC_PUBLIC Opcodes/ACC_STATIC) "identity" "(I)I" nil nil)] 
-    (loop [^DynamicClassLoader cl (new clojure.lang.DynamicClassLoader) times-left n]
+  (let [cw (ClassWriter. ClassWriter/COMPUTE_MAXS)
+        cn (ClassNode.)
+        mn (MethodNode. (+ Opcodes/ACC_PUBLIC Opcodes/ACC_STATIC) "identity" "(I)I" nil nil)] 
+    (loop [cl (DynamicClassLoader.)
+           times-left n]
       (let [class-name (str "Identity-" times-left)
             cl-bytes (get-class-bytes-with-asm-ref opcodes class-name "identity" "(I)I" cn cw mn)]
         (load-class cl class-name cl-bytes)
