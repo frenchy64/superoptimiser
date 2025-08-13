@@ -1,6 +1,7 @@
 (ns Main.Superoptimise
-  (:require [clojure.tools.logging :refer [info error]])
-  (:use Main.Bytecode Main.Opcodes clojure.test)
+  (:require [clojure.tools.logging :refer [info error]]
+            [Main.Bytecode :refer [get-class]]
+            [Main.Opcodes :refer [expanded-numbered-opcode-sequence]])
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            clojure.lang.Reflector))
 
@@ -21,7 +22,7 @@
 (defn with-timeout
   "Take a name, function, and timeout. Run the function in a named ThreadGroup until the timeout."
   ([name code thunk time]
-     (let [^ThreadGroup tg (ThreadGroup. (str name)) task (FutureTask. (comp identity thunk))
+     (let [tg (ThreadGroup. (str name)) task (FutureTask. (comp identity thunk))
            thr (if tg (Thread. tg task) (Thread. task))]
        (try
          (.start thr)
