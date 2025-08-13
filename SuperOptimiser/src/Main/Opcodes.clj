@@ -1,14 +1,13 @@
-(ns Main.Opcodes)
-(use 'clojure.set)
-(use 'clojure.test)
-(use 'clojure.math.combinatorics)
-(use 'Main.Global)
-(use '[Filters.RedundancyFilter :only (no-redundancy?)])
-(use '[Filters.InfluenceFilter :only (retains-influence?)])
-(use '[Filters.OperandStackFilter :only (uses-operand-stack-ok?)])
-(use '[Filters.VariableUseFilter :only (uses-vars-ok?)])
-(use '[Filters.ReturnFilter :only (finishes-ireturn? no-ireturn?)])
-(use '[Filters.StackHeightFilter :only (branches-respect-stack-height?)])
+(ns Main.Opcodes
+  (:require [clojure.test :refer [is]]
+            [clojure.math.combinatorics :as comb]
+            [Main.Global :refer [opcodes]]
+            [Filters.RedundancyFilter :refer [no-redundancy?]]
+            [Filters.InfluenceFilter :refer [retains-influence?]]
+            [Filters.OperandStackFilter :refer [uses-operand-stack-ok?]]
+            [Filters.VariableUseFilter :refer [uses-vars-ok?]]
+            [Filters.ReturnFilter :refer [finishes-ireturn? no-ireturn?]]
+            [Filters.StackHeightFilter :refer [branches-respect-stack-height?]]))
 
 (set! *warn-on-reflection* true)
 
@@ -158,7 +157,7 @@
   [vars length position op_args]
   (let [op (first op_args) args (rest op_args)]
     (map #(cons op %)
-         (apply cartesian-product
+         (apply comb/cartesian-product
                 (map (partial expand-single-arg vars length position op) args)))))
 
 (defn expand-opcodes
@@ -166,7 +165,7 @@
   [m s]
   (let [seq-length (count s) max-vars (+ m (count-storage-ops s)) indexing-fn (partial expand-arg max-vars seq-length)]
     (map #(hash-map :length seq-length :vars max-vars :code % :jumps (list-jumps %))
-         (apply cartesian-product
+         (apply comb/cartesian-product
                 (map-indexed indexing-fn
                              (map #(cons (first %) (:args (opcodes (first %)))) s))))))
 
