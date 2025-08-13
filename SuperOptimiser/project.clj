@@ -1,7 +1,7 @@
-(defproject SuperOptimiser "0.0.1"
+(defproject SuperOptimiser "0.0.2-SNAPSHOT"
   :description "Exhaustive searches for optimal JVM bytecode, while u wait"
   :dependencies [[org.clojure/clojure "1.12.1"]
-                 [org.ow2.asm/asm "4.0"]
+                 [org.ow2.asm/asm "4.0"] ;;FIXME update to Clojure's version
                  [org.ow2.asm/asm-tree "4.0"]
                  [lein-eclipse "1.0.0"]
                  [noir "1.3.0-beta1"]
