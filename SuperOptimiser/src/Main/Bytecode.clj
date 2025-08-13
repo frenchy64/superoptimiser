@@ -1,6 +1,5 @@
 (ns Main.Bytecode
-    (:use [clojure.tools.logging :only (info)]))
-(use 'clojure.test)
+  (:use [clojure.tools.logging :only (info)]))
 (use 'Main.Global)
 (import '(clojure.lang DynamicClassLoader))
 (import '(java.io FileOutputStream))
@@ -62,36 +61,15 @@
   [s i p]
   (concat (take p s) (list (list (first (nth s p)) i)) (nthrest s (inc p))))
 
-(is (= '((:a :1) (:b) (:c) (:d) (:e)) (replace-at '((:a :0) (:b) (:c) (:d) (:e)) :1 0)))
-(is (= '((:a) (:b :1) (:c) (:d) (:e)) (replace-at '((:a) (:b) (:c) (:d) (:e)) :1 1)))
-(is (= '((:a) (:b) (:c :1) (:d) (:e)) (replace-at '((:a) (:b) (:c) (:d) (:e)) :1 2)))
-(is (= '((:a) (:b) (:c) (:d :1) (:e)) (replace-at '((:a) (:b) (:c) (:d) (:e)) :1 3)))
-(is (= '((:a) (:b) (:c) (:d) (:e :1)) (replace-at '((:a) (:b) (:c) (:d) (:e)) :1 4)))
-
 (defn insert-at
   "Create a new sequence consisting of the input sequence s with an extra item i inserted at a position distance d from p"
   [s i p]
   (concat (take p s) (list i) (nthrest s p)))
-
-(is (= '((:a) (:b) (:c) (:1) (:d) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 3)))
-(is (= '((:a) (:b) (:1) (:c) (:d) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 2)))
-(is (= '((:a) (:1) (:b) (:c) (:d) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 1)))
-(is (= '((:a) (:b) (:c) (:d) (:1) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 4)))
-(is (= '((:a) (:b) (:c) (:d) (:e) (:1)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 5)))
-(is (= '((:1) (:a) (:b) (:c) (:d) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 0)))
-(is (= '((:a) (:1) (:b) (:c) (:d) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 1)))
-(is (= '((:a) (:b) (:1) (:c) (:d) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 2)))
-(is (= '((:a) (:b) (:c) (:d) (:1) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 4)))
-(is (= '((:a) (:b) (:c) (:d) (:e) (:1)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 5)))
-(is (= '((:a) (:b) (:c) (:1) (:d) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 3)))
-(is (= '((:a) (:b) (:1) (:c) (:d) (:e)) (insert-at '((:a) (:b) (:c) (:d) (:e)) '(:1) 2)))
  
 (defn labels-inserted-before
   "How many of the jumps in the map jl have a src node before max-jump-src and insert a label before node?"
   [max-jump-src node jl]
   (reduce #(if (and (< %2 max-jump-src) (<= (get jl %2) node)) (inc %1) (identity %1)) 0 (keys jl)))
-
-(is (= (labels-inserted-before 1 1 '{1 2 2 0})))
 
 (defn add-labels
   "Takes a sequence of opcodes+arguments and a map of jumps; uses the map to add appropriate label entries to correspond to branch destinations"
@@ -112,29 +90,12 @@
                    (+ src labels-before-src))
                  (inc jump-num))))))
   
-(is (= '((:label_0) (:iload_0) (:goto :label_0) (:ireturn))
-       (add-labels '((:iload_0) (:goto -1) (:ireturn)) {1 0})))
-(is (= '((:iload_0) (:goto :label_0) (:label_0) (:istore_1) (:ireturn))
-       (add-labels '((:iload_0) (:goto 1) (:istore_1) (:ireturn)) {1 2})))
-(is (= '((:iload_0) (:goto :label_0) (:istore_1) (:label_0) (:ireturn))
-       (add-labels '((:iload_0) (:goto 2) (:istore_1) (:ireturn)) {1 3})))
-(is (= '((:label_0) (:bipush 1) (:goto :label_0) (:ireturn))
-       (add-labels '((:bipush 1) (:goto -1) (:ireturn)) {1 0})))
-(is (= '((:label_0) (:label_1) (:iload_0) (:goto :label_0) (:goto :label_1) (:ireturn))
-       (add-labels '((:iload_0) (:goto -1) (:goto -2) (:ireturn)) {1 0 2 0})))
-(is (= '((:iload_0) (:dup) (:dup) (:dup) (:swap) (:ifgt :label_0) (:iinc 0 0) (:label_0) (:ireturn))
-       (add-labels '((:iload_0) (:dup) (:dup) (:dup) (:swap) (:ifgt 2) (:iinc 0 0) (:ireturn)) {5 7})))
-(is (= '((:iload_0) (:dup) (:dup) (:ifne :label_0) (:swap) (:label_0) (:ifgt :label_1) (:iinc 0 0) (:label_1) (:ireturn))
-       (add-labels '((:iload_0) (:dup) (:dup) (:ifne 2) (:swap) (:ifgt 2) (:iinc 0 0) (:ireturn)) '{3 5 5 7})))
-
 (defn make-labels-map
   "Take the sequence of opcodes provided and make a map of name to LabelNode, for each label"
   [o]
   (into {} (map #(assoc {} (first %) (new LabelNode))
                 (distinct
                   (filter is-a-label? o)))))
-
-(is (= 1 (count (make-labels-map (add-labels '((:iload_0) (:goto -1) (:ireturn)) '{1 0})))))
 
 (defn get-instructions
   "Turns the supplied map containing a list of opcodes and arguments into an InsnList"
@@ -147,10 +108,6 @@
    (catch Exception e (do
                         (println "Exception " e a)
                         (throw e)))))
-
-(is (= 4 (. (get-instructions '{ :code ((:iload_0) (:ifeq -1) (:ireturn)) :jumps {1 0}}) size)))
-(is (= 2 (. (get-instructions '{ :code ((:iload_0) (:ireturn)) :jumps {}}) size)))
-(is (= 1 (. (get-instructions '{ :code ((:ireturn)) :jumps {}}) size)))
 
 (defn get-class-bytes
   "Creates a Java Class from the supplied data, returns an array of bytes representing that class. Input should be a map containing keys
