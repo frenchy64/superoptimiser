@@ -1,7 +1,9 @@
 (ns Drivers.Signum
-      (:use [clojure.tools.logging :only (info)]))
-(use 'Main.Superoptimise)
-(use 'Main.Bytecode)
+  (:require [clojure.tools.logging :refer [info]]
+            [Main.Superoptimise :refer [invoke-method superoptimise-pmap superoptimise-slice]]
+            [Main.Bytecode :refer [get-class]]))
+
+(set! *warn-on-reflection* true)
 
 ; The daddy: superoptimises the signum() function, as per the original Masselin experiments
 
@@ -21,20 +23,23 @@
                        (fn minus-one? [i]  (= -1 (invoke-method i method-name -1)))
                        (fn is-zero? [i]  (= 0 (invoke-method i method-name 0)))
                        ]]
-  	(defn -main []
-     (time
-       (dorun
+  (defn -main []
+    (time
+      (dorun
         (superoptimise-pmap 7 class-name method-name method-signature eq-tests-filter))))
 
-   (defn equivalent?
-     "Is the class-map passes in equivalence to Integer.signum()?"
-     [cm]
-     (let [class (get-class cm class-name method-name method-signature (:seq-num cm))]
-	     (loop [num-tests 100000
-	            input 0]
-        (if (= 0 num-tests) true
-          (if (not (= (Integer/signum input)  (invoke-method class method-name input))) false
-            (recur (dec num-tests) (- (quot Integer/MAX_VALUE 2) (rand-int Integer/MAX_VALUE))))))))
+  (defn equivalent?
+    "Is the class-map passes in equivalence to Integer.signum()?"
+    [cm]
+    (let [class (get-class cm class-name method-name method-signature (:seq-num cm))]
+      (loop [num-tests 100000
+             input 0]
+        (or (= 0 num-tests)
+            (if-not (= (Integer/signum input)  (invoke-method class method-name input))
+              false
+              (recur (dec num-tests)
+                     (- (quot Integer/MAX_VALUE 2)
+                        (long (rand-int Integer/MAX_VALUE)))))))))
  
    (defn check-sequences
      "Takes a list of possible working class-maps, runs a big probabilistic test against each one, and compares to the java.lang.Integer implementation"
@@ -45,12 +50,11 @@
            (println (equivalent? (first remainder)) (first remainder))
            (recur (rest remainder))))))
    
-    (defn run-slice
-      "Superoptimises a small slice of the overall search space"
-      [num-nodes cur-node]
-      (do
-        (info "starting node " cur-node "/" num-nodes)
-	      (time
-	          (dorun
-	            (superoptimise-slice 7 class-name method-name method-signature eq-tests-filter num-nodes cur-node)))
-        (info "finishing node " cur-node "/" num-nodes))))
+   (defn run-slice
+     "Superoptimises a small slice of the overall search space"
+     [num-nodes cur-node]
+     (info "starting node " cur-node "/" num-nodes)
+     (time
+       (dorun
+         (superoptimise-slice 7 class-name method-name method-signature eq-tests-filter num-nodes cur-node)))
+     (info "finishing node " cur-node "/" num-nodes)))

@@ -1,18 +1,19 @@
 (ns Main.Superoptimise
-  (:use [clojure.tools.logging :only (info error)])
-  (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)))
-(import 'clojure.lang.Reflector)
-(use 'Main.Bytecode)
-(use 'Main.Opcodes)
-(use 'clojure.test)
+  (:require [clojure.tools.logging :refer [info error]]
+            [Main.Bytecode :refer [get-class]]
+            [Main.Opcodes :refer [expanded-numbered-opcode-sequence]])
+  (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
+           clojure.lang.Reflector))
+
+(set! *warn-on-reflection* true)
 
 ; Main driver functions for the SuperOptimiser. Kept here so they don't pollute your individual SO stuff
 
-(defn invoke-method [class method & arg] (Reflector/invokeStaticMethod class method (into-array arg)))
+(defn invoke-method [^String class ^String method & arg] (Reflector/invokeStaticMethod class method ^objects (into-array arg)))
 
 (defn num-method-args
   "How many arguments does the quoted Java method signature contain?"
-  [s]
+  [^String s]
   (dec (- (.indexOf s ")") (.indexOf s "("))))
 
 ; The method below was adapted from code at https://github.com/flatland/clojail/blob/master/src/clojail/core.clj#L40
@@ -21,7 +22,7 @@
 (defn with-timeout
   "Take a name, function, and timeout. Run the function in a named ThreadGroup until the timeout."
   ([name code thunk time]
-     (let [tg (new ThreadGroup (str name)) task (FutureTask. (comp identity thunk))
+     (let [tg (ThreadGroup. (str name)) task (FutureTask. (comp identity thunk))
            thr (if tg (Thread. tg task) (Thread. task))]
        (try
          (.start thr)
@@ -36,7 +37,7 @@
            (.stop thr) 
            (println "Exception" e)
            false)
-         (finally (when tg (.stop tg)))))))
+         (finally (some-> tg .interrupt))))))
 
 ; Taken from http://stackoverflow.com/questions/2622750/why-does-clojure-hang-after-having-performed-my-calculations
 ; A cheap means of doing our filtering by spreading the load across many threads

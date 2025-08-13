@@ -1,5 +1,5 @@
-(ns Drivers.Identity)
-(use 'Main.Superoptimise)
+(ns Drivers.Identity
+  (:require [Main.Superoptimise :refer [invoke-method superoptimise-pmap]]))
 
 ; Superoptimises the Identity function
 ;
@@ -9,15 +9,15 @@
       method-name "identity"
       method-signature "(I)I"
       eq-tests-filter [
-                       (fn one-is-one? [i] (= 1 (invoke-method i method-name 1)))
-                       (fn zero-is-zero? [i] (= 0 (invoke-method i method-name 0)))
-                       (fn minus-one-is-minus-one? [i] (= -1 (invoke-method i method-name -1)))
-                       (fn minint-is-minint? [i] (= Integer/MIN_VALUE (invoke-method i method-name Integer/MIN_VALUE)))
-                       (fn maxint-is-maxint? [i] (= Integer/MAX_VALUE (invoke-method i method-name Integer/MAX_VALUE)))
-                       (fn one-is-not-zero? [i] (not (= 1 (invoke-method i method-name 0))))
-                       (fn one-is-not-minus-one? [i] (not (= 1 (invoke-method i method-name -1))))
+                       (fn one-is-one?             [i] (= 1                 (invoke-method i method-name 1)))
+                       (fn zero-is-zero?           [i] (= 0                 (invoke-method i method-name 0)))
+                       (fn minus-one-is-minus-one? [i] (= -1                (invoke-method i method-name -1)))
+                       (fn minint-is-minint?       [i] (= Integer/MIN_VALUE (invoke-method i method-name Integer/MIN_VALUE)))
+                       (fn maxint-is-maxint?       [i] (= Integer/MAX_VALUE (invoke-method i method-name Integer/MAX_VALUE)))
+                       (fn one-is-not-zero?        [i] (not= 1 (invoke-method i method-name 0)))
+                       (fn one-is-not-minus-one?   [i] (not= 1 (invoke-method i method-name -1)))
                        ]]
-	(defn -main []
-	  (time
-	    (doall
-	      (superoptimise-pmap 2 class-name method-name method-signature eq-tests-filter)))))
+  (defn -main []
+    (time
+      (dorun
+        (superoptimise-pmap 2 class-name method-name method-signature eq-tests-filter)))))
