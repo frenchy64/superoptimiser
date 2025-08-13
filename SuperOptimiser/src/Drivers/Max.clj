@@ -1,6 +1,8 @@
 (ns Drivers.Max
-        (:use [clojure.tools.logging :only (info)]))
-(use 'Main.Superoptimise)
+  (:require [clojure.tools.logging :refer [info]]
+            [Main.Superoptimise :refer [invoke-method superoptimise-pmap superoptimise-slice]]))
+
+(set! *warn-on-reflection* true)
 
 ; Superoptimises the Max() function
 
@@ -18,17 +20,17 @@
                        (fn both-negative-revargs? [i]  (= -1 (invoke-method i method-name -3 -1)))
                        ]]
 
-	(defn -main []
-	  (time 
-	    (doall
-	      (superoptimise-pmap 6 class-name method-name method-signature eq-tests-filter))))
+  (defn -main []
+    (time 
+      (doall
+        (superoptimise-pmap 6 class-name method-name method-signature eq-tests-filter))))
 
-    (defn run-slice
-      "Superoptimises a small slice of the overall search space"
-      [num-nodes cur-node]
-      (do
-        (info "starting node " cur-node "/" num-nodes)
-	      (time
-	          (dorun
-	            (superoptimise-slice 6 class-name method-name method-signature eq-tests-filter num-nodes cur-node)))
-        (info "finishing node " cur-node "/" num-nodes))))
+  (defn run-slice
+    "Superoptimises a small slice of the overall search space"
+    [num-nodes cur-node]
+    (do
+      (info "starting node " cur-node "/" num-nodes)
+      (time
+        (dorun
+          (superoptimise-slice 6 class-name method-name method-signature eq-tests-filter num-nodes cur-node)))
+      (info "finishing node " cur-node "/" num-nodes))))
