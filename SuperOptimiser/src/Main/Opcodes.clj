@@ -10,6 +10,8 @@
 (use '[Filters.ReturnFilter :only (finishes-ireturn? no-ireturn?)])
 (use '[Filters.StackHeightFilter :only (branches-respect-stack-height?)])
 
+(def +starting-opcode-always-iload_0+ true)
+
 ; A list of opcodes which store into a variable. We count these so that
 ; we can derive a ceiling for the possible number of local variables.
 (def storage-opcodes '[:istore :istore_0 :istore_1 :istore_2 :istore_3])
@@ -43,14 +45,11 @@
                 (= (second cur-pair) (nth opcodes idx-next))) false
               (recur (rest pairs)))))))))
 
-(is (= false (contains-no-redundant-pairs? '((:ixor) (:swap) (:swap)))))
-(is (= false (contains-no-redundant-pairs? '((:swap) (:swap)))))
-(is (= false (contains-no-redundant-pairs? '((:swap) (:swap) (:ixor)))))
-(is (= true (contains-no-redundant-pairs? '((:ixor) (:swap) (:ixor) (:swap)))))
 
 (defn is-valid?
   "Master validity filter: returns true if this opcode sequence can form the basis of a viable bytecode sequence"
   [n s]
+  (assert (not (Thread/interrupted)))
   (and
     (finishes-ireturn? s)
     (uses-vars-ok? n true s)
@@ -63,19 +62,31 @@
 (defn is-fertile?
   "Master fertility filter: returns true if any children of this opcode sequence s with n arguments may be valid"
   [n s]
-  (and
-    (uses-operand-stack-ok? s)
-    (no-redundancy? n s)
-    (no-ireturn? s)
-    (uses-vars-ok? n false s)
-    (contains-no-redundant-pairs? s)
-))
+  (or (empty? s)
+      (and (uses-operand-stack-ok? s)
+           (no-redundancy? n s)
+           (no-ireturn? s)
+           (uses-vars-ok? n false s)
+           (contains-no-redundant-pairs? s))))
 
 ; This version of the get-children method can be used to enforce that every code sequence starts
 ; by loading its argument. This is a shortcut; most of them *seem* to do this...
+#_
 (defn get-children-new [n s] 
-  (if (empty? s) '([(:iload_0)])
-    (if (is-fertile? n s) (map #(conj s (list %)) (keys opcodes)))))
+  (assert (not (Thread/interrupted)))
+  (if (empty? s)
+    (if +starting-opcode-always-iload_0+
+      '([(:iload_0)])
+      '([]))
+    (if (is-fertile? n s)
+      (map #(conj s (list %))
+           (keys opcodes)))))
+
+(defn get-children-new [n s] 
+  (assert (not (Thread/interrupted)))
+  (when (is-fertile? n s)
+    (map #(conj s (list %))
+         (keys opcodes))))
 
 (defn get-children [n s] (if (or (empty? s) (is-fertile? n s)) (map #(conj s (list %)) (keys opcodes))))
 
@@ -84,8 +95,28 @@
 (defn opcode-sequence-new
   "Return a sequence of potentially valid opcode sequences N opcodes in length"
   [max-depth num-args]
-  (let [validity-filter (partial is-valid? num-args) fertile-children (partial get-children-new num-args) depth (dec max-depth)]
-    (filter validity-filter (map #(conj % (list :ireturn)) (rest (tree-seq #(< (count %) depth) fertile-children '[]))))))
+  (assert (not (Thread/interrupted)))
+  (let [validity-filter (partial is-valid? num-args)
+        fertile-children (partial get-children-new num-args)
+        depth (dec max-depth)]
+    (->> (tree-seq #(do
+                      (assert (not (Thread/interrupted)))
+                      (< (count %) depth))
+                   fertile-children '[])
+         rest
+         (map #(do (assert (not (Thread/interrupted)))
+                   (conj % (list :ireturn))))
+         (filter validity-filter))))
+
+(comment
+  (opcode-sequence-new 0 0)
+  (opcode-sequence-new 1 0)
+  (opcode-sequence-new 1 1)
+  (opcode-sequence-new 50 2)
+  (opcode-sequence-new 5 0)
+  (opcode-sequence-new 2 1)
+  #_([(:iload_0) (:ireturn)])
+  )
 
 (defn opcode-sequence
   "Return a sequence of potentially valid opcode sequences N opcodes in length"
@@ -167,7 +198,19 @@
 (defn expanded-numbered-opcode-sequence
   "Return a numbered, expanded sequence of all valid opcode permutations of length n presuming m arguments"
   [n m]
+  (assert (not (Thread/interrupted)))
   (map-indexed (fn [idx itm] (assoc itm :seq-num idx))
-     (filter branches-respect-stack-height?
-           (mapcat identity
-                   (map (partial expand-opcodes m) (opcode-sequence-new n m))))))
+               (filter branches-respect-stack-height?
+                       (mapcat identity
+                               (map (partial expand-opcodes m)
+                                    (opcode-sequence-new n m))))))
+
+(comment
+  (opcode-sequence-new 3 1)
+  (get-children-new 1 '[(:iinc 0 1) (:iload_0)])
+  (is-fertile? 1 '[(:iinc 0 1) (:iload_0)])
+  (is-fertile? 1 '[(:iload_0)])
+  (is-fertile? 1 '[(:iload_0)])
+  (is-fertile? 1 '[])
+  (uses-operand-stack-ok? '[(:iload_0) (:ireturn)])
+  )

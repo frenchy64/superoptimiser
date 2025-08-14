@@ -17,7 +17,8 @@
                        (fn one-is-not-zero? [i] (not (= 1 (invoke-method i method-name 0))))
                        (fn one-is-not-minus-one? [i] (not (= 1 (invoke-method i method-name -1))))
                        ]]
-	(defn -main []
-	  (time
-	    (doall
-	      (superoptimise-pmap 2 class-name method-name method-signature eq-tests-filter)))))
+  (defn -main []
+    (time
+      (doall
+        (superoptimise-pmap 2 class-name method-name method-signature eq-tests-filter)))
+    (shutdown-agents)))

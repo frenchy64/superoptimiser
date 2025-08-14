@@ -27,33 +27,36 @@
   "Creates a child of an AbstractInsNode and returns it"
   [op labels & argseq]
   (let [args (flatten argseq) opcode (first op)]
-
-  (if (:jump (opcode opcodes)) (new JumpInsnNode ((opcodes opcode) :opcode) ((first args) labels))
-    
-    ; Look up any label node from the labels map passed in
-
-    (if (is-a-label? op) (get labels opcode)
-		  (or
-	      (case opcode
-	          :istore (new VarInsnNode 54 (first args))
-	          :istore_0 (new VarInsnNode 54 0)
-	          :istore_1 (new VarInsnNode 54 1)
-	          :istore_2 (new VarInsnNode 54 2)
-	          :istore_3 (new VarInsnNode 54 3)
-	          :iload (new VarInsnNode 21 (first args))
-	          :iload_0 (new VarInsnNode 21 0)
-	          :iload_1 (new VarInsnNode 21 1)
-	          :iload_2 (new VarInsnNode 21 2)
-	          :iload_3 (new VarInsnNode 21 3)
-	          :iinc (new IincInsnNode (first args) (second args)) 
-	          :bipush (new IntInsnNode 16 (first args)) 
-	          nil)
-       (if (nil? ((opcodes opcode) :args)) (new InsnNode ((opcodes opcode) :opcode))))))))
+    (if (:jump (opcode opcodes))
+      (JumpInsnNode. ((opcodes opcode) :opcode)
+                     ((first args) labels))
+      ; Look up any label node from the labels map passed in
+      (if (is-a-label? op)
+        (get labels opcode)
+        (case opcode
+          :istore (new VarInsnNode 54 (first args))
+          :istore_0 (new VarInsnNode 54 0)
+          :istore_1 (new VarInsnNode 54 1)
+          :istore_2 (new VarInsnNode 54 2)
+          :istore_3 (new VarInsnNode 54 3)
+          :iload (new VarInsnNode 21 (first args))
+          :iload_0 (new VarInsnNode 21 0)
+          :iload_1 (new VarInsnNode 21 1)
+          :iload_2 (new VarInsnNode 21 2)
+          :iload_3 (new VarInsnNode 21 3)
+          :iinc (new IincInsnNode (first args) (second args)) 
+          :bipush (new IntInsnNode 16 (first args)) 
+          (when (nil? ((opcodes opcode) :args))
+            (new InsnNode ((opcodes opcode) :opcode))))))))
     
 (defn add-opcode-and-args
   "Pulls an opcode off the sequence provided, adds it and any arguments to the insnlist, returns the remainder of the sequence"
   [insnlist ocs labels]
-  (let [op-tuple (first ocs) op (first op-tuple) num-args (if (is-a-label? op-tuple) 0 (count ((opcodes op) :args)))]
+  (let [op-tuple (first ocs)
+        op (first op-tuple)
+        num-args (if (is-a-label? op-tuple)
+                   0
+                   (count ((opcodes op) :args)))]
     (. insnlist add (add-opcode op-tuple labels (rest op-tuple)))
     (rest ocs)))
 
@@ -140,13 +143,16 @@
   "Turns the supplied map containing a list of opcodes and arguments into an InsnList"
   [a]
   (try
-	  (let [l (new InsnList) labelled-opcodes (add-labels (:code a) (:jumps a)) labels-map (make-labels-map labelled-opcodes)]
-	    (loop [codes labelled-opcodes]
-	      (if (empty? codes) l
-	        (recur (add-opcode-and-args l codes labels-map)))))
-   (catch Exception e (do
-                        (println "Exception " e a)
-                        (throw e)))))
+    (let [l (InsnList.)
+          labelled-opcodes (add-labels (:code a) (:jumps a))
+          labels-map (make-labels-map labelled-opcodes)]
+      (loop [codes labelled-opcodes]
+        (if (empty? codes)
+          l
+          (recur (add-opcode-and-args l codes labels-map)))))
+    (catch Exception e
+      (println "Exception " e a)
+      (throw e))))
 
 (is (= 4 (. (get-instructions '{ :code ((:iload_0) (:ifeq -1) (:ireturn)) :jumps {1 0}}) size)))
 (is (= 2 (. (get-instructions '{ :code ((:iload_0) (:ireturn)) :jumps {}}) size)))
@@ -184,13 +190,15 @@
 (defn get-class
   "Creates and loads a class file with the given name"
   [classmap className methodName methodSig seqnum]
-    (try
-      (let [full-class-name (str className "-" seqnum)
-            num (swap! class_num inc)]
-        (if (= 0 (mod num 1000000)) (info "created class #" num))
-        (load-class full-class-name
-                    (get-class-bytes classmap full-class-name methodName methodSig)
-                    (if (= 0 (mod num 50000)) (swap! classloader instantiate-classloader) @classloader)))
-      (catch ClassFormatError cfe (do
-                                    (println cfe)
-                                    nil))))
+  (try
+    (let [full-class-name (str className "-" seqnum)
+          num (swap! class_num inc)
+          _ (when (= 0 (mod num 1000000))
+              (info "created class #" num))]
+      (load-class full-class-name
+                  (get-class-bytes classmap full-class-name methodName methodSig)
+                  (if (= 0 (mod num 50000))
+                    (swap! classloader instantiate-classloader)
+                    @classloader)))
+    (catch ClassFormatError cfe
+      (println cfe))))
