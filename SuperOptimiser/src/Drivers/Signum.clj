@@ -23,8 +23,8 @@
                        ]]
   	(defn -main []
      (time
-       (dorun
-        (superoptimise-pmap 7 class-name method-name method-signature eq-tests-filter))))
+       (first
+        (superoptimise-pmap 50 class-name method-name method-signature eq-tests-filter))))
 
    (defn equivalent?
      "Is the class-map passes in equivalence to Integer.signum()?"

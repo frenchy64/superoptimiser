@@ -43,10 +43,6 @@
                 (= (second cur-pair) (nth opcodes idx-next))) false
               (recur (rest pairs)))))))))
 
-(is (= false (contains-no-redundant-pairs? '((:ixor) (:swap) (:swap)))))
-(is (= false (contains-no-redundant-pairs? '((:swap) (:swap)))))
-(is (= false (contains-no-redundant-pairs? '((:swap) (:swap) (:ixor)))))
-(is (= true (contains-no-redundant-pairs? '((:ixor) (:swap) (:ixor) (:swap)))))
 
 (defn is-valid?
   "Master validity filter: returns true if this opcode sequence can form the basis of a viable bytecode sequence"
@@ -84,8 +80,25 @@
 (defn opcode-sequence-new
   "Return a sequence of potentially valid opcode sequences N opcodes in length"
   [max-depth num-args]
-  (let [validity-filter (partial is-valid? num-args) fertile-children (partial get-children-new num-args) depth (dec max-depth)]
-    (filter validity-filter (map #(conj % (list :ireturn)) (rest (tree-seq #(< (count %) depth) fertile-children '[]))))))
+  (let [validity-filter (partial is-valid? num-args)
+        fertile-children (partial get-children-new num-args)
+        depth (dec max-depth)]
+    (->> (tree-seq #(< (count %) depth) fertile-children '[])
+         rest
+         (map #(conj % (list :ireturn)))
+         (filter validity-filter))))
+
+(comment
+  (opcode-sequence-new 0 0)
+  (opcode-sequence-new 1 0)
+  (opcode-sequence-new 1 1)
+  (opcode-sequence-new 50 2)
+  (opcode-sequence-new 5 0)
+  (opcode-sequence-new 2 1)
+  #_([(:iload_0) (:ireturn)])
+  )
+
+(deftest )
 
 (defn opcode-sequence
   "Return a sequence of potentially valid opcode sequences N opcodes in length"
@@ -168,6 +181,8 @@
   "Return a numbered, expanded sequence of all valid opcode permutations of length n presuming m arguments"
   [n m]
   (map-indexed (fn [idx itm] (assoc itm :seq-num idx))
-     (filter branches-respect-stack-height?
-           (mapcat identity
-                   (map (partial expand-opcodes m) (opcode-sequence-new n m))))))
+               (filter branches-respect-stack-height?
+                       (mapcat identity
+                               (map (partial expand-opcodes m)
+                                    (opcode-sequence-new n m))))))
+

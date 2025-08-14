@@ -74,9 +74,16 @@
 (defn superoptimise-pmap
   "Main driver function for the SuperOptimiser - using pmap"
   [seq-len c-root m-name m-sig tests]
-  (map #(info (str "PASS " c-root "." m-name " " %)) 
-       (pfilter (partial check-passes tests c-root m-name m-sig)
-              (expanded-numbered-opcode-sequence seq-len (num-method-args m-sig)))))
+  (->> m-sig
+       num-method-args
+       (expanded-numbered-opcode-sequence seq-len)
+       (pfilter (partial check-passes tests c-root m-name m-sig))
+       (map #(info (str "PASS " c-root "." m-name " " %)))))
+
+(comment 
+  (num-method-args "(I)I")
+  (expanded-numbered-opcode-sequence 50 1)
+  )
 
 (defn superoptimise-slice
   "Main driver function for the SuperOptimiser - but just taking a slice of the overall search space"
