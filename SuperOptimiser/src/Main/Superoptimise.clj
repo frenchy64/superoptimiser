@@ -38,12 +38,17 @@
            false)
          (finally (when tg (.stop tg)))))))
 
+(set! *warn-on-reflection* true)
+
 ; Taken from http://stackoverflow.com/questions/2622750/why-does-clojure-hang-after-having-performed-my-calculations
 ; A cheap means of doing our filtering by spreading the load across many threads
 (defn pfilter [pred coll]
-  (map second
-    (filter first
-      (pmap (fn [item] [(pred item) item]) coll))))
+  (let [t (Thread/currentThread)]
+    (map second
+         (filter first
+                 (pmap (fn [item]
+                         (assert (not (.isInterrupted t)))
+                         [(pred item) item]) coll)))))
 
 (defn check-passes-with-timeout
   "check if a class passes its equivalence tests"
@@ -55,7 +60,8 @@
 (defn check-passes
   "check if a class passes its equivalence tests"
   [tests c-root m-name m-sig cmap]
-  (let [num (:seq-num cmap) class (get-class cmap c-root m-name m-sig (:seq-num cmap))]
+  (let [num (:seq-num cmap)
+        class (get-class cmap c-root m-name m-sig (:seq-num cmap))]
     (try
       (every? #(% class) tests)
     (catch ArithmeticException e
@@ -83,6 +89,7 @@
 (comment 
   (num-method-args "(I)I")
   (expanded-numbered-opcode-sequence 50 1)
+  (expanded-numbered-opcode-sequence 2 1)
   )
 
 (defn superoptimise-slice

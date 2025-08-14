@@ -13,7 +13,9 @@
   ; keep a count of the opstack-effect values so far
   ; if this is ever less than the current opstack-needs, return false
   (loop [stack-size 0 op-head l]
-    (let [cur-op (first op-head) opcode (first cur-op) next (rest op-head)]
+    (let [cur-op (first op-head)
+          opcode (first cur-op)
+          next (rest op-head)]
       (cond
 
         (> (:opstack-needs (opcode opcodes)) stack-size) false
